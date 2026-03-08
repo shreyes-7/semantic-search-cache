@@ -4,50 +4,40 @@ from app.api.routes import router, set_service
 from app.embeddings.embedder import Embedder
 from app.vectorstore.faiss_store import VectorStore
 from app.cache.semantic_cache import SemanticCache
-from app.clustering.fuzzy_cluster import FuzzyCluster
 from app.services.query_service import QueryService
 
-import pandas as pd
+import numpy as np
+import faiss
+import pickle
 
 app = FastAPI()
 
-print("Loading dataset...")
+print("Loading saved models...")
 
-df = pd.read_csv("data/processed/corpus.csv")
+embeddings = np.load("models/embeddings.npy")
 
-# Remove NaN values
-df = df.dropna(subset=["text"])
+index = faiss.read_index("models/faiss.index")
 
-# Ensure all values are strings
-df["text"] = df["text"].astype(str)
+with open("models/cluster_model.pkl", "rb") as f:
+    cluster = pickle.load(f)
 
-documents = df["text"].tolist()
+with open("models/documents.pkl", "rb") as f:
+    documents = pickle.load(f)
 
-print("Total documents:", len(documents))
+print("Models loaded")
 
 embedder = Embedder()
 
-print("Generating embeddings...")
-
-embeddings = embedder.embed_documents(documents)
-
-print("Building vector store...")
-
 vector_store = VectorStore(len(embeddings[0]))
-vector_store.add(embeddings, documents)
-
-print("Training clustering model...")
-
-cluster = FuzzyCluster(n_clusters=20)
-cluster.fit(embeddings)
+vector_store.index = index
+vector_store.documents = documents
 
 cache = SemanticCache()
 
 service = QueryService(embedder, vector_store, cache, cluster)
 
-# pass objects to API routes
 set_service(service, cache)
 
 app.include_router(router)
 
-print("Application startup complete.")
+print("Application startup complete")
