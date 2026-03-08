@@ -9,9 +9,11 @@ class QueryService:
 
     def process_query(self, query):
 
-        q_emb = self.embedder.embed_query(query)
+        embedding = self.embedder.embed_query(query)
 
-        hit, entry, score = self.cache.lookup(q_emb)
+        hit, entry, score = self.cache.lookup(embedding)
+
+        dominant_cluster = self.cluster.dominant_cluster(embedding)
 
         if hit:
 
@@ -20,19 +22,21 @@ class QueryService:
                 "cache_hit": True,
                 "matched_query": entry["query"],
                 "similarity_score": float(score),
-                "result": entry["result"]
+                "result": entry["result"],
+                "dominant_cluster": int(dominant_cluster)
             }
 
-        results = self.store.search(q_emb)
+        results = self.store.search(embedding)
 
-        result_text = results[0][0]
+        result = results[0]
 
-        self.cache.store(query, q_emb, result_text)
+        self.cache.store(query, embedding, result)
 
         return {
             "query": query,
             "cache_hit": False,
             "matched_query": None,
             "similarity_score": float(score),
-            "result": result_text
+            "result": result,
+            "dominant_cluster": int(dominant_cluster)
         }
