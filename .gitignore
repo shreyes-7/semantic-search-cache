@@ -17,10 +17,19 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# VS Code settings (optional)
+# VS Code settings
 .vscode/
 
 # Python build files
 build/
 dist/
 *.egg-info/
+
+# ML model artifacts
+models/
+*.npy
+*.index
+*.pkl
+
+# Logs
+*.log
